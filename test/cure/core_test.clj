@@ -169,3 +169,56 @@
       (is (not (has solution :c)))
       (is (not (has solution :d)))
       (is (not (has solution :e))))))
+
+
+(deftest solving-for-closest-viable-configuration-single-solution
+  (testing "a feature model with requirements that are unsatisfiable and require relaxing constraints"
+    (let [ solution (configuration
+            (feature-model
+              (relax-constraints
+                [(feature :a)
+                (feature :b)
+                (feature :c)
+                (feature :d)
+                (feature :e)
+                (requires :a 2 2 [:b :d])
+                (excludes :b [:d])
+                (resource_limit :cpu 12 {:a 10 :b 4 :e 1})
+                (selected [:a])]
+                [(requires :a 2 2 [:b :d]) (excludes :b [:d])])))]
+      (is (= (solution :changes) 1)))))
+
+(deftest solving-for-closest-viable-configuration-minimize-changes
+  (testing "a feature model with requirements that are unsatisfiable and require relaxing constraints / minimizing changes"
+    (let [ solution (configuration
+            (feature-model
+              (relax-constraints
+                [(feature :a)
+                (feature :b)
+                (feature :c)
+                (feature :d)
+                (feature :e)
+                (requires :a 2 2 [:b :d])
+                (excludes :b [:d])
+                (resource_limit :cpu 12 {:a 10 :b 4 :e 1})
+                (selected [:a])]
+                [(requires :a 2 2 [:b :d]) (excludes :b [:d])])) :minimize :changes)]
+      (is (= (solution :changes) 1)))))
+
+
+(deftest solving-for-closest-viable-configuration-maximize-changes
+  (testing "a feature model with requirements that are unsatisfiable and require relaxing constraints / maximizing changes"
+    (let [ solution (configuration
+            (feature-model
+              (relax-constraints
+                [(feature :a)
+                (feature :b)
+                (feature :c)
+                (feature :d)
+                (feature :e)
+                (requires :a 2 2 [:b :d])
+                (excludes :b [:d])
+                (resource_limit :cpu 12 {:a 10 :b 4 :e 1})
+                (selected [:a])]
+                [(requires :a 2 2 [:b :d]) (excludes :b [:d])])) :maximize :changes)]
+      (is (= (solution :changes) 2)))))

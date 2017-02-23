@@ -15,7 +15,9 @@
 ;; Creates a boolean variable indicating the presence or
 ;; absence of a feature in a configuration
 (defn feature [name]
-  (con/$in name 0 1))
+  {:fm-constraint {:type :declare-feature :features feature}
+   :realization (con/$in name 0 1)})
+
 
 ;; Uses the built-in knapsack constraint to define a resource
 ;; constraint governing the slection of features
@@ -25,33 +27,88 @@
          vname (keyword (str "_" (name rname) ".value"))
          value_vars (take (count consumers) (repeat 1))
          weight_vars (map #(second %) consumer_pairs)]
-    (list
-      (con/$in rname 0 amount)
-      (con/$in vname 0 (count consumer_pairs))
-      (con/$knapsack weight_vars value_vars occurence_vars rname vname)
-      (con/$<= rname amount))))
+    {:fm-constraint {:type :resource-limit :resource rname :amount amount :consumption-map consumers}
+     :realization
+        (list
+          (con/$in rname 0 amount)
+          (con/$in vname 0 (count consumer_pairs))
+          (con/$knapsack weight_vars value_vars occurence_vars rname vname)
+          (con/$<= rname amount))}))
 
 ;; Specifies that a feature requires between min..max of the target features or exactly count of them
 (defn requires
   ([parent min max children]
-     (con/$if (con/$= parent 1)
-              (con/$and
-                (con/$<= (apply con/$+ children) max)
-                (con/$>= (apply con/$+ children) min))))
+     {:fm-constraint {:type :requires :parent parent :features children :min min :max max}
+       :realization
+       (con/$if (con/$= parent 1)
+                (con/$and
+                  (con/$<= (apply con/$+ children) max)
+                  (con/$>= (apply con/$+ children) min)))})
   ([parent count children]
-     (con/$if (con/$= parent 1) (con/$= (apply con/$+ children) max))))
+     {:fm-constraint {:type :requires :parent parent :min count :max count :features children}
+       :realization
+       (con/$if (con/$= parent 1) (con/$= (apply con/$+ children) max))}))
 
 ;; Specifies that the provided parent is mutually exclusive with all features specified in children
 (defn excludes [parent children]
-  (con/$if (con/$= parent 1) (con/$= (apply con/$+ children) 0)))
+  {:fm-constraint {:type :excludes :parent parent :features children}
+   :realization
+    (con/$if (con/$= parent 1) (con/$= (apply con/$+ children) 0))})
 
 ;; Forces the selection of the given features
 (defn selected [features]
-  (con/$= (apply con/$+ features) (count features)))
+  {:fm-constraint {:type :selected :features features}
+   :realization (con/$= (apply con/$+ features) (count features))})
 
 ;; Prevents the selection of the given features
 (defn deselected [features]
-  (con/$= (apply con/$+ features) 0))
+  {:fm-constraint {:type :selected :features features}
+   :realization (con/$= (apply con/$+ features) 0)})
+
+;; Provides a method for making a constraint relaxable where
+;; the solver can choose not to enforce it. This is used to
+;; support operations like "find the closest valid configuration"
+;; to a set of unsatisfiable constraints given to the solver.
+(defn relax-constraint [con id]
+  (let [real-con (con :realization)]
+    (if (= (real-con :type) :int-domain)
+      {:relax-vars [] :constraints [real-con]}
+      {:relax-vars [id]
+         :constraints
+          [{:realization [(con/$in id 0 1)
+           (con/$or real-con (con/$= id 1))]}]})))
+
+;; Allows a user to express constraints that can be relaxed
+;; if necessary to find a viable solution. The first argument
+;; is the original feature model constraints and any requirements,
+;; such as selected features. The second argument is a list of the
+;; constraints that can be violated if necessary.
+;;
+;;
+;; Example where we force the solver to find a solution that requires
+;; making changes to our constraints using the list of relaxable constraints.
+;;
+;; (configuration
+;;  (feature-model
+;;    (relax-constraints
+;;      [(feature :a)
+;;      (feature :b)
+;;      (feature :c)
+;;      (feature :d)
+;;      (feature :e)
+;;      (requires :a 2 2 [:b :d])
+;;      (excludes :b [:d])
+;;      (resource_limit :cpu 12 {:a 10 :b 4 :e 1})
+;;      (selected [:a])]
+;;      [(requires :a 2 2 [:b :d]) (excludes :b [:d])])))
+(defn relax-constraints [fm relaxation-rules]
+  (let [relaxation-set (into #{} (map #(% :fm-constraint) relaxation-rules))
+        unaffected (filter #(not (contains? relaxation-set (% :fm-constraint))) fm)
+        affected (filter #(contains? relaxation-set (% :fm-constraint)) fm)
+        relaxed (map-indexed (fn [index con] (relax-constraint con (keyword (str "relaxed_" index)))) affected)
+        relaxvars (flatten (map #(% :relax-vars) relaxed))
+        relaxsum {:realization [(con/$in :changes 0 (count relaxvars)) (con/$= (apply con/$+ relaxvars) :changes )]}]
+      (flatten (concat (flatten (concat unaffected (map #(% :constraints) relaxed))) [relaxsum]))))
 
 ;; Returns true if all of the specified features are in the
 ;; configuration (E.g., solution) previously returned
@@ -89,7 +146,7 @@
 
 ;; Constructs a feature model with the given constraints
 (defn feature-model [constraints]
-  (vec (flatten constraints)))
+  (vec (flatten (map #(% :realization) constraints))))
 
 
 ;; Example feature selection problem
