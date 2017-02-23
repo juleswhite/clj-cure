@@ -207,7 +207,7 @@
 
 
 (deftest solving-for-closest-viable-configuration-maximize-changes
-  (testing "a feature model with requirements that are unsatisfiable and require relaxing constraints / maximizing changes"
+  (testing "that the constraints provided in the list are relaxed by the solver"
     (let [ solution (configuration
             (feature-model
               (relax-constraints
@@ -222,3 +222,55 @@
                 (selected [:a])]
                 [(requires :a 2 2 [:b :d]) (excludes :b [:d])])) :maximize :changes)]
       (is (= (solution :changes) 2)))))
+
+(deftest solving-for-vialbe-configuration-with-matcher-func-maximize-changes
+  (testing "that the constraints matching the provided function are relaxed by the solver"
+    (let [ solution (configuration
+            (feature-model
+              (relax-constraints-matching
+                [(feature :a)
+                (feature :b)
+                (feature :c)
+                (feature :d)
+                (feature :e)
+                (requires :a 2 2 [:b :d])
+                (excludes :b [:d])
+                (resource_limit :cpu 12 {:a 10 :b 4 :e 1})
+                (selected [:a])]
+                #(or (= :requires (% :type)) (= :excludes (% :type))))) :maximize :changes)]
+      (is (= (solution :changes) 2)))))
+
+(deftest solving-for-vialbe-configuration-with-matcher-func-and-single-match
+  (testing "that the constraints matching the provided function are relaxed by the solver"
+    (let [ solution (configuration
+            (feature-model
+              (relax-constraints-matching
+                [(feature :a)
+                (feature :b)
+                (feature :c)
+                (feature :d)
+                (feature :e)
+                (requires :a 2 2 [:b :d])
+                (excludes :b [:d])
+                (resource_limit :cpu 12 {:a 10 :b 4 :e 1})
+                (selected [:a])]
+                #(= :requires (% :type)))) :maximize :changes)]
+      (is (= (solution :changes) 1)))))
+
+
+(deftest solving-for-non-viable-configuration-after-relaxation
+  (testing "that the solver doesn't produce a solution when the relaxed constraints also aren't satisifiable"
+    (let [ solution (configuration
+            (feature-model
+              (relax-constraints-matching
+                [(feature :a)
+                (feature :b)
+                (feature :c)
+                (feature :d)
+                (feature :e)
+                (requires :a 2 2 [:b :d])
+                (excludes :b [:d])
+                (resource_limit :cpu 12 {:a 10 :b 4 :e 1})
+                (selected [:a])]
+                #(= :excludes (% :type)))) :maximize :changes)]
+      (is (nil? solution)))))

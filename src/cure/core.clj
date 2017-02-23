@@ -62,7 +62,7 @@
 
 ;; Prevents the selection of the given features
 (defn deselected [features]
-  {:fm-constraint {:type :selected :features features}
+  {:fm-constraint {:type :deselected :features features}
    :realization (con/$= (apply con/$+ features) 0)})
 
 ;; Provides a method for making a constraint relaxable where
@@ -77,6 +77,34 @@
          :constraints
           [{:realization [(con/$in id 0 1)
            (con/$or real-con (con/$= id 1))]}]})))
+
+;; Allows a user to express constraints that can be relaxed
+;; if necessary to find a viable solution. The first argument
+;; is the original feature model constraints and any requirements,
+;; such as selected features. The second argument is function that
+;; returns true for each constraint that can be relaxed.
+;;
+;; The function will be passed constraint representations of the form:
+;;
+;; {:type :declare-feature :features feature}
+;; {:type :resource-limit :resource rname :amount amount :consumption-map consumers}
+;; {:type :requires :parent parent :features children :min min :max max}
+;; {:type :excludes :parent parent :features children}
+;; {:type :selected :features features}
+;; {:type :deselected :features features}
+;;
+;;
+;; Example where we force the solver to find a solution that requires
+;; making changes to our constraints using the list of relaxable constraints.
+;;
+;; The
+(defn relax-constraints-matching [fm relaxation-matcher]
+  (let [unaffected (filter #(not (relaxation-matcher (% :fm-constraint))) fm)
+        affected (filter #(relaxation-matcher (% :fm-constraint)) fm)
+        relaxed (map-indexed (fn [index con] (relax-constraint con (keyword (str "relaxed_" index)))) affected)
+        relaxvars (flatten (map #(% :relax-vars) relaxed))
+        relaxsum {:realization [(con/$in :changes 0 (count relaxvars)) (con/$= (apply con/$+ relaxvars) :changes )]}]
+      (flatten (concat (flatten (concat unaffected (map #(% :constraints) relaxed))) [relaxsum]))))
 
 ;; Allows a user to express constraints that can be relaxed
 ;; if necessary to find a viable solution. The first argument
@@ -102,13 +130,8 @@
 ;;      (selected [:a])]
 ;;      [(requires :a 2 2 [:b :d]) (excludes :b [:d])])))
 (defn relax-constraints [fm relaxation-rules]
-  (let [relaxation-set (into #{} (map #(% :fm-constraint) relaxation-rules))
-        unaffected (filter #(not (contains? relaxation-set (% :fm-constraint))) fm)
-        affected (filter #(contains? relaxation-set (% :fm-constraint)) fm)
-        relaxed (map-indexed (fn [index con] (relax-constraint con (keyword (str "relaxed_" index)))) affected)
-        relaxvars (flatten (map #(% :relax-vars) relaxed))
-        relaxsum {:realization [(con/$in :changes 0 (count relaxvars)) (con/$= (apply con/$+ relaxvars) :changes )]}]
-      (flatten (concat (flatten (concat unaffected (map #(% :constraints) relaxed))) [relaxsum]))))
+  (let [relaxation-set (into #{} (map #(% :fm-constraint) relaxation-rules))]
+      (relax-constraints-matching fm (partial contains? relaxation-set))))
 
 ;; Returns true if all of the specified features are in the
 ;; configuration (E.g., solution) previously returned
