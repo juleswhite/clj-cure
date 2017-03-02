@@ -1,4 +1,4 @@
-(defproject clj-cure "0.1.0-SNAPSHOT"
+(defproject juleswhite/clj-cure "0.1.0-SNAPSHOT"
   :description "Constraint UR Environment"
   :url "https://github.com/juleswhite/clj-cure"
   :license {:name "Eclipse Public License"

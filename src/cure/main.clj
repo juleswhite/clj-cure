@@ -40,6 +40,7 @@
   (System/exit status))
 
 (defn load-edn-file 
+    "load a set of constraints from a file"
     [filename]
     (with-open [input (->> filename
                            clojure.java.io/reader
