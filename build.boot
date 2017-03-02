@@ -6,14 +6,24 @@
    '[[org.clojure/clojure "1.8.0"] 
      [loco "0.3.1"]
      [org.clojure/tools.cli "0.3.5"]
-     [org.clojure/tools.reader "1.0.0-beta4"]])
+     [org.clojure/tools.reader "1.0.0-beta4"]
+     [adzerk/bootlaces "0.1.13" :scope "test"]])
+
+(require '[boot.git :refer [last-commit]]
+         '[adzerk.bootlaces :as laces])
+(def +version+ "0.1.0")
+(laces/bootlaces! +version+)
 
 (task-options!
   repl {:init-ns 'cure.main}
+  push {:repo           "deploy"
+        :ensure-branch  "master"
+        :ensure-clean   true
+        :ensure-tag     (last-commit)
+        :ensure-version +version+}
   pom {:project 'juleswhite/clj-cure
-       :version "0.1.0"
+       :version +version+
        :description "Constraint UR Environment"
-       ;; :classifier "jar"
        :packaging "jar"
        :url "https://github.com/juleswhite/clj-cure"
        :scm {:url "https://github.com/juleswhite/clj-cure"
@@ -34,5 +44,5 @@
 (deftask build
   "Build my project and put it in the local repository."
   []
-  (comp (aot :all true) (pom) (jar) (install)))
+  (laces/build-jar))
   
