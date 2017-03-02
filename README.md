@@ -31,7 +31,7 @@ FIXME: explanation
 
 ## Examples
 
-   (def tm (feature-model 
+    (def tm (feature-model 
              [(feature :a)
               (feature :b)
               (feature :c)

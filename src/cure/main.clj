@@ -2,7 +2,7 @@
     (:require 
         [clojure.tools.cli :as cli]
         [clojure.java.io :as io]
-        [cure.core :as core]
+        [cure.core :as cure]
         [clojure.string :as string]
         [clojure.pprint :as pp]
         [clojure.tools.reader.edn :as edn])

@@ -175,4 +175,14 @@
 (defn feature-model
   "Constructs a feature model with the given constraints"
   [constraints]
-  (vec (flatten (map #(% :realization) constraints))))
+  (vec 
+    (flatten 
+      (map 
+         (fn [rule]
+           (try
+             (let [local-fn (ns-resolve 'cure.core (first rule))
+                   comp-rule (apply local-fn (rest rule))]
+               (:realization comp-rule))
+             (catch Exception ex 
+                (println "problem: " rule (.getMessage ex) (.printStackTrace ex))))) 
+         constraints))))
