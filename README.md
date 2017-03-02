@@ -31,7 +31,7 @@ FIXME: explanation
 
 ## Examples
 
-  (def tm (feature-model 
+   (def tm (feature-model 
              [(feature :a)
               (feature :b)
               (feature :c)
@@ -43,20 +43,20 @@ FIXME: explanation
               (resource_limit :cpu 12 {:a 10 :b 4 :e 1})
               (selected [:a])])]
   
-   ;; Get a single solution:
-   (configuration tm)
+    ;; Get a single solution:
+    (configuration tm)
   
-   ;; Minimize cpu:
-   (configuration tm :minimize :cpu)
+    ;; Minimize cpu:
+    (configuration tm :minimize :cpu)
   
-   ;; Select as many of a, b, d as possible:
-   (configuration tm :maximize (con/$+ :a :b :d))
+    ;; Select as many of a, b, d as possible:
+    (configuration tm :maximize (con/$+ :a :b :d))
   
-   ;; Get all configurations
-   (all-configurations tm)
+    ;; Get all configurations
+    (all-configurations tm)
   
-   ;; Limit how long we configure:
-   (all-configurations tm :timeout 5000)))
+    ;; Limit how long we configure:
+    (all-configurations tm :timeout 5000)))
 
 
 
