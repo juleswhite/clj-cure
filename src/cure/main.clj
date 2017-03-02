@@ -39,6 +39,14 @@
   (println msg)
   (System/exit status))
 
+(defn load-edn-file 
+    [filename]
+    (with-open [input (->> filename
+                           clojure.java.io/reader
+                           java.io.PushbackReader.)]
+        (let [fm (repeatedly (partial edn/read {:eof :end-of-file} input))]
+            (doall (take-while (partial not= :end-of-file) fm)))))
+                  
 (defn -main
   "Need some type of command line interface to pass 
    in configuration definitions in Clojure"
@@ -48,11 +56,7 @@
          (:help options) (exit 0 (usage summary))
          errors (exit 1 (error-msg errors)))
      (pp/pprint options)
-     (with-open [input (->> (:input options)
-                          clojure.java.io/reader
-                          java.io.PushbackReader.)]
-        (let [fm (repeatedly (partial edn/read {:eof :theend} input))]
-           (try
-              (pp/pprint (concat (take-while (partial not= :theend) fm)))
-              (catch Exception ex 
-                  (pp/pprint (.getMessage ex))))))))
+     (try
+        (pp/pprint (load-edn-file (:input options)))
+        (catch Exception ex 
+            (pp/pprint (.getMessage ex))))))
