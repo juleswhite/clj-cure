@@ -1,12 +1,7 @@
 (ns cure.core
-    (:require [loco.core :as solver] 
-              [loco.constraints :as con]))
-
-(defn -main
-  "Need some type of command line interface to pass 
-   in configuration definitions in Clojure"
-  [& args]
-  (println "Hello, World!"))
+    (:require 
+        [loco.core :as solver] 
+        [loco.constraints :as con]))
 
 (defn feature 
   "Creates a boolean variable indicating the presence or
@@ -181,34 +176,3 @@
   "Constructs a feature model with the given constraints"
   [constraints]
   (vec (flatten (map #(% :realization) constraints))))
-
-(defn example
-  "Example feature selection problem"
-  []
-  (let [tm (feature-model 
-             [(feature :a)
-              (feature :b)
-              (feature :c)
-              (feature :d)
-              (feature :e)
-              (requires :e 1 1 [:b :d])
-              (excludes :b [:d])
-              (requires :a 2 3 [:b :c :d])
-              (resource_limit :cpu 12 {:a 10 :b 4 :e 1})
-              (selected [:a])])]
-  
-   ;; Get a single solution:
-   (configuration tm)
-  
-   ;; Minimize cpu:
-   (configuration tm :minimize :cpu)
-  
-   ;; Select as many of a, b, d as possible:
-   (configuration tm :maximize (con/$+ :a :b :d))
-  
-   ;; Get all configurations
-   (all-configurations tm)
-  
-   ;; Limit how long we configure:
-   (all-configurations tm :timeout 5000)))
-
