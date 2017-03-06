@@ -3,16 +3,17 @@
  :resource-paths #{"res"}
  :source-paths #{"src"}
  :dependencies
-   '[[org.clojure/clojure "1.8.0"] 
+   '[[org.clojure/clojure "1.8.0"]
      [loco "0.3.1"]
      [org.clojure/tools.cli "0.3.5"]
      [org.clojure/tools.reader "1.0.0-beta4"]
-     [adzerk/bootlaces "0.1.13" :scope "test"]])
+     [adzerk/bootlaces "0.1.13" :scope "test"]
+     [ch.qos.logback/logback-classic "1.1.7"]])
 
 (require '[boot.git :refer [last-commit]]
-         '[adzerk.bootlaces :as laces])
+         '[adzerk.bootlaces :refer [bootlaces! build-jar]])
 (def +version+ "0.1.0")
-(laces/bootlaces! +version+)
+(bootlaces! +version+)
 
 (task-options!
   repl {:init-ns 'cure.main}
@@ -44,5 +45,5 @@
 (deftask build
   "Build my project and put it in the local repository."
   []
-  (laces/build-jar))
+  (build-jar))
   

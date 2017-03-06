@@ -10,7 +10,7 @@
   {:fm-constraint {:type :declare-feature :features feature}
    :realization (con/$in name 0 1)})
  
-(defn resource_limit
+(defn resource-limit
   "Uses the built-in knapsack constraint to define a resource
    constraint governing the slection of features"
   [rname amount consumers]
@@ -172,17 +172,25 @@
   [model & options]
   (apply solver/solution (args model options)))
 
-(defn feature-model
-  "Constructs a feature model with the given constraints"
-  [constraints]
-  (vec 
-    (flatten 
-      (map 
-         (fn [rule]
-           (try
-             (let [local-fn (ns-resolve 'cure.core (first rule))
-                   comp-rule (apply local-fn (rest rule))]
-               (:realization comp-rule))
-             (catch Exception ex 
-                (println "problem: " rule (.getMessage ex) (.printStackTrace ex))))) 
-         constraints))))
+
+(defmulti compile-rule 
+  "This multi-method compiles the rule according to its first argument."
+  (fn [rule] (keyword (first rule))))
+  
+(defmethod compile-rule :feature [rule] (apply feature (rest rule)))
+(defmethod compile-rule :requires [rule] (apply requires (rest rule)))
+(defmethod compile-rule :excludes [rule] (apply excludes (rest rule)))
+(defmethod compile-rule :resource_limit [rule] (apply resource-limit (rest rule)))
+(defmethod compile-rule :selected [rule] (apply selected (rest rule)))
+(defmethod compile-rule :deselected [rule] (apply deselected (rest rule)))
+
+(defn feature-model 
+  "Construct a feature model with the supplied constraints.
+   The input can use keywords, symbols or strings to indicate the record type."
+   [constraints]
+   (-> #(try (:realization (compile-rule %))
+           (catch Exception ex
+              (println "problem compiling: " % (.getMessage ex))))
+       (map constraints)
+       flatten
+       vec))
