@@ -172,13 +172,13 @@
   [model & options]
   (apply solver/solution (args model options)))
 
-
 (defmulti compile-rule 
   "This multi-method compiles the rule according to its first argument."
   (fn [rule] (keyword (first rule))))
   
 (defmethod compile-rule :feature [rule] (apply feature (rest rule)))
 (defmethod compile-rule :requires [rule] (apply requires (rest rule)))
+(defmethod compile-rule :variation [rule] (apply requires (rest rule)))
 (defmethod compile-rule :excludes [rule] (apply excludes (rest rule)))
 (defmethod compile-rule :resource_limit [rule] (apply resource-limit (rest rule)))
 (defmethod compile-rule :selected [rule] (apply selected (rest rule)))
